@@ -1,4 +1,0 @@
-import pickle
-
-with open("data/memory.pkl", "rb") as f:
-    memory = pickle.load(f)  # <-- This line can raise EOFError
