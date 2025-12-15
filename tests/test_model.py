@@ -16,7 +16,7 @@ def test_handle_query_no_key():
 
 def test_handle_query_placeholder_key():
     original = os.environ.get("OPENAI_API_KEY")
-    os.environ["OPENAI_API_KEY"] = "YOUR_OPENAI_API_KEY"
+    os.environ["OPENAI_API_KEY"] = "PLACEHOLDER_OPENAI_KEY"  # pragma: allowlist secret
     try:
         resp = handle_query("Hello")
         assert "OpenAI API key not set" in resp or "placeholder" in resp
