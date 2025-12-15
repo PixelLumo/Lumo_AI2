@@ -19,7 +19,12 @@ def handle_query(prompt: str) -> str:
     # Ensure API key is available at request time
     api_key = os.getenv("OPENAI_API_KEY")
     # Treat placeholders or unset values as missing keys
-    if not api_key or api_key.strip() == "" or api_key.upper().startswith("YOUR"):
+    if (
+        not api_key
+        or api_key.strip() == ""
+        or api_key.upper().startswith("YOUR")
+        or "PLACEHOLDER" in api_key.upper()
+    ):
         return (
             "OpenAI API key not set or is a placeholder. Please set a valid "
             "OPENAI_API_KEY environment variable or add it to a .env file."
