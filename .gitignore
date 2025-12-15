@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+ai_env/
+
+# Environment files
+.env
+
+# Editor folders
+.vscode/
+
+# OS files
+.DS_Store

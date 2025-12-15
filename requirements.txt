@@ -1,0 +1,15 @@
+flask
+speechrecognition
+openai
+pyttsx3
+requests
+pydub
+transformers
+torch   
+numpy
+scipy
+librosa
+soundfile
+webrtcvad
+ffmpeg-python
+python-dotenv
