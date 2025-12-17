@@ -1,0 +1,75 @@
+# Python - Compiled and cached files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+dist/
+build/
+*.whl
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Project specific
+data/*.pkl
+data/memory.pkl
+data/embeddings.pkl
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Pre-commit and security scanning
+.pre-commit-config.yaml
+.secrets.baseline
+
+# Pre-commit
+.pre-commit-config.yaml
+.secrets.baseline
+
+# OS
+.DS_Store
+Thumbs.db
+.directory
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
