@@ -1,2 +1,5 @@
-def show(text):
-    print(f"\nLUMO: {text}\n")
+def display(text: str):
+    print(f"[LUMO] {text}")
+
+def display_text(text: str):
+    print(f"[LUMO] {text}")

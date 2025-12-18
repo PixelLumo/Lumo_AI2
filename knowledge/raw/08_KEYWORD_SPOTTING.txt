@@ -1,0 +1,9 @@
+Keyword Spotting
+----------------
+Wake word detection:
+- Wake word: "lumo"
+- Lightweight detection
+- No full model inference needed
+- Energy-based detection
+- Configurable sensitivity
+- Low CPU overhead

@@ -1,4 +1,4 @@
-def save_note(content):
+def save_note(text: str):
     with open("notes.txt", "a") as f:
-        f.write(content + "\n")
+        f.write(text + "\n")
     return "Note saved."

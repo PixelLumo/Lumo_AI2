@@ -1,11 +1,9 @@
-openai
-python-dotenv
-flask
 requests
+flask
+faster-whisper
 sounddevice
 numpy
-faiss-cpu
-faster-whisper
-torch
 scipy
-webrtcvad
+faiss-cpu
+sentence-transformers
+python-dotenv

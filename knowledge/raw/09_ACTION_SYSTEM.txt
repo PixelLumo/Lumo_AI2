@@ -1,0 +1,8 @@
+Action System
+--------------
+Available actions:
+- web_search: Search the web
+- save_note: Save notes to file
+- execute_action: Execute user requests
+- generate_response: LLM response
+All actions logged for audit trail.

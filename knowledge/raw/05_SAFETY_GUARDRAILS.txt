@@ -1,0 +1,10 @@
+Safety Guardrails
+-----------------
+Safety features:
+- Confirmation gates for destructive actions
+- Input validation on all prompts
+- Rate limiting on API calls
+- Error handling with fallbacks
+- Audit logging of actions
+- User consent tracking
+- Content filtering

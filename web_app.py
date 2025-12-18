@@ -1,45 +1,20 @@
-#!/usr/bin/env python3
-"""
-LUMO Web Interface
-Text-based LLM testing via browser
-"""
-
-from flask import Flask, render_template, request, jsonify
-from datetime import datetime
-from core.llm import ask_llm
-from core.planner import execute_action
-from core.logger import logger
+from flask import Flask, request, jsonify
+from core.llm import generate_response
+from core.memory import Memory
 
 app = Flask(__name__)
+memory = Memory()
 
-# Session state
-messages = []
-WAKE_WORD = "lumo"
-pending_confirmation = None
-TURN_NUM = 0
+@app.route("/ask", methods=["POST"])
+def ask():
+    data = request.json
+    prompt = data.get("prompt", "")
+    response = generate_response(prompt, memory)
+    memory.add(prompt, response)
+    return jsonify({"response": response})
 
-FUNCTIONS = [
-    {
-        "name": "web_search",
-        "description": "Search the web",
-        "parameters": {
-            "type": "object",
-            "properties": {"query": {"type": "string"}},
-            "required": ["query"]
-        }
-    },
-    {
-        "name": "save_note",
-        "description": "Save a note",
-        "parameters": {
-            "type": "object",
-            "properties": {"content": {"type": "string"}},
-            "required": ["content"]
-        }
-    }
-]
-
-logger.info("WEB MODE started")
+if __name__ == "__main__":
+    app.run(debug=True)
 
 
 @app.route("/")

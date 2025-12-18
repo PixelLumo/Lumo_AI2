@@ -1,0 +1,9 @@
+Memory System
+--------------
+Memory features:
+- Conversation history tracking
+- Context window of last 20 interactions
+- Fast retrieval for context
+- Simple in-memory storage
+- Extensible to FAISS vector DB
+- Privacy-preserving local storage

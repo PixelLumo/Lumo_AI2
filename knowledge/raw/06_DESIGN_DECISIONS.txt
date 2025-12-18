@@ -1,0 +1,10 @@
+Design Decisions
+----------------
+Key architectural choices:
+1. Modular design for extensibility
+2. Local-first for privacy
+3. Ollama for open-source LLM
+4. FAISS for fast retrieval
+5. Simple memory for quick prototyping
+6. Flask for web interface
+7. Python for rapid development

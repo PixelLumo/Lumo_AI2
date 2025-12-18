@@ -1,31 +1,10 @@
-"""RAG integration - inject knowledge into LLM prompts."""
+from knowledge.search import semantic_search
 
-from knowledge.search import retrieve
-
-
-def answer_with_knowledge(user_input, messages, k=3):
-    """
-    Augment LLM call with retrieved knowledge.
-
-    Args:
-        user_input: User question
-        messages: Existing message history (will be modified)
-        k: Number of chunks to retrieve (default 3)
-
-    Returns:
-        Modified messages list with knowledge context injected
-    """
-    # Retrieve relevant chunks
-    context_chunks = retrieve(user_input, k=k)
-
-    if context_chunks:
-        # Build knowledge block
-        knowledge_block = "\n\n".join(context_chunks)
-
-        # Inject as system message before user query
-        messages.append({
+def augment_with_knowledge(prompt: str):
+    results = semantic_search(prompt)
+    return f"{prompt}\n\nKnowledge Context:\n" + "\n".join(results)
             "role": "system",
-            "content": f"Relevant knowledge from your knowledge base:\n\n{knowledge_block}"
+            "content": knowledge_content
         })
 
     # Add user query

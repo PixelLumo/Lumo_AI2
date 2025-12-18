@@ -1,0 +1,9 @@
+Learning System
+---------------
+Learning features:
+- Interaction logging
+- Pattern analysis
+- User preference tracking
+- Adaptive responses
+- Feedback integration
+- Performance metrics

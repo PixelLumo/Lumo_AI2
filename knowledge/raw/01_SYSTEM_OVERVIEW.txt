@@ -1,0 +1,4 @@
+Lumo AI System Overview
+-----------------------
+This is a dummy knowledge base for testing.
+Contains system description, architecture, rules, and sample actions.

@@ -1,0 +1,9 @@
+RAG Pipeline
+------------
+Retrieval-Augmented Generation:
+- Query retrieval from knowledge base
+- Semantic similarity matching
+- Context injection into prompts
+- Knowledge augmentation
+- Relevance scoring
+- Multi-document support

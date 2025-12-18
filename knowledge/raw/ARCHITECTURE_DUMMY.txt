@@ -1,0 +1,8 @@
+Lumo AI Architecture
+====================
+Lumo is a modular voice AI assistant with the following components:
+- Speech-to-Text: Processes voice input
+- LLM Backend: Generates responses using Ollama
+- Memory System: Tracks conversation history
+- Knowledge Base: Provides context for responses
+- Action System: Executes user requests

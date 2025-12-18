@@ -1,0 +1,9 @@
+Pipeline Flow
+--------------
+Request Flow:
+1. Audio Input: User speaks
+2. STT: Convert to text
+3. Processing: Extract intent
+4. RAG: Retrieve knowledge
+5. LLM: Generate response
+6. TTS: Speak response

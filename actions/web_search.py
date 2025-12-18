@@ -1,2 +1,3 @@
-def web_search(query):
-    return f"I would search the web for: {query}"
+def web_search(query: str):
+    # Dummy web search
+    return f"Top result for '{query}': https://example.com"

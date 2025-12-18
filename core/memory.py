@@ -1,20 +1,13 @@
-import faiss
-import numpy as np
-
-
 class Memory:
-    def __init__(self, dim=1536):
-        self.index = faiss.IndexFlatL2(dim)
-        self.data = []
+    def __init__(self):
+        self.history = []
 
-    def add(self, embedding, text):
-        self.index.add(np.array([embedding]).astype("float32"))
-        self.data.append(text)
+    def add(self, user_text: str, ai_text: str):
+        self.history.append({"user": user_text, "ai": ai_text})
+        if len(self.history) > 20:  # keep last 20 interactions
+            self.history.pop(0)
 
-    def search(self, embedding, k=3):
-        if self.index.ntotal == 0:
-            return []
-        distances, indices = self.index.search(
-            np.array([embedding]).astype("float32"), k
+    def get_context(self) -> str:
+        return "\n".join(
+            [f"User: {item['user']}\nLumo: {item['ai']}" for item in self.history]
         )
-        return [self.data[i] for i in indices[0]]
