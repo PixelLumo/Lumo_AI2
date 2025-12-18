@@ -1,0 +1,427 @@
+LUMO AI - DECEMBER 2025 DECISIONS
+
+=== ARCHITECTURE SNAPSHOT (2025-12-18) ===
+
+CURRENT STACK:
+  - Speech-to-Text: Faster-Whisper (offline, fast)
+  - Wake Word: Text-based "lumo" detection (simple, effective)
+  - Voice Activity Detection: WebRTC VAD (efficient)
+  - LLM: Ollama + Llama 3.1 (local, no API keys)
+  - Vector DB: FAISS (fast semantic search)
+  - Embeddings: SentenceTransformer (lightweight)
+  - Memory: JSON files (simple, portable)
+  - Logging: Structured JSON (auditable)
+
+RATIONALE:
+  All components selected for:
+  1. Local-first (no cloud dependencies)
+  2. Simplicity (minimal setup)
+  3. Performance (fast responses)
+  4. Privacy (data stays local)
+  5. Cost (free, open-source)
+
+---
+
+=== DECISION: LLM INFERENCE ARCHITECTURE ===
+
+DECISION: Use RAG (Retrieval-Augmented Generation)
+DATE: 2025-12-18
+CONTEXT:
+  Base LLM (Llama 3.1 7B) has knowledge cutoff
+  User might ask about system-specific info
+  Need grounded answers (not hallucinations)
+
+CHOSEN APPROACH: RAG
+  1. Retrieve relevant chunks from knowledge base
+  2. Insert as system context in prompt
+  3. LLM answers using provided context
+  4. Sources are traceable
+
+BENEFITS:
+  ✓ Answers grounded in facts (no hallucination)
+  ✓ Can update knowledge without retraining
+  ✓ Fast (retrieval + inference in 2-5 seconds)
+  ✓ Transparent (can see sources)
+  ✓ Extensible (add new knowledge anytime)
+
+ALTERNATIVES CONSIDERED:
+  Option A: Fine-tune LLM on knowledge
+    - Requires GPU, hours of training
+    - Hard to update
+    - Decision: TOO EXPENSIVE
+  
+  Option B: No augmentation (vanilla LLM)
+    - Simple, no retrieval overhead
+    - LLM hallucinates more often
+    - Can't use external knowledge
+    - Decision: TOO RISKY (unreliable)
+  
+  Option C: External API (OpenAI, Anthropic)
+    - Better quality
+    - Requires API keys, payment
+    - Privacy concerns
+    - Cloud dependency
+    - Decision: CONTRADICTS LOCAL-FIRST
+
+DECISION: RAG wins (grounded, updatable, fast, local)
+
+---
+
+=== DECISION: VECTOR EMBEDDING MODEL ===
+
+DECISION: Use SentenceTransformer all-MiniLM-L6-v2
+DATE: 2025-12-18
+CONTEXT:
+  Need embeddings for semantic search
+  Must work offline (no API)
+  Must fit on consumer hardware
+
+CHOSEN MODEL: all-MiniLM-L6-v2
+  - 22 MB (downloads in seconds)
+  - 384 dimensions (good balance)
+  - Trained on semantic similarity
+  - Fast inference (CPU compatible)
+  - Well-maintained (active community)
+
+ALTERNATIVES CONSIDERED:
+  Option A: OpenAI embeddings
+    - Highest quality
+    - Requires API key, $$ per request
+    - Cloud dependency
+    - Privacy concerns
+    - Decision: TOO EXPENSIVE & NOT LOCAL
+  
+  Option B: BERT (larger model)
+    - Good quality
+    - Slower inference
+    - Larger memory footprint
+    - Overkill for current use case
+    - Decision: TOO HEAVY
+  
+  Option C: TF-Hub models
+    - Lightweight
+    - Less optimized for semantic search
+    - Smaller community support
+    - Decision: LESS MATURE
+
+DECISION: SentenceTransformer for simplicity + quality
+
+---
+
+=== DECISION: CONFIRMATION GATE IMPLEMENTATION ===
+
+DECISION: Require explicit approval for destructive actions
+DATE: 2025-12-18
+CONTEXT:
+  System can execute actions (save_note, delete, etc.)
+  Need to prevent accidental data loss
+  Need to maintain user control and trust
+
+CHOSEN APPROACH: CONFIRMATION GATE
+  1. LLM suggests action (save_note, etc.)
+  2. System displays action to user
+  3. User must explicitly confirm (say "yes" or "approve")
+  4. 10-second timeout (fail-safe: reject if no response)
+  5. Log all decisions (audit trail)
+
+AFFECTED ACTIONS:
+  Require confirmation: save_note, delete, execute_custom_action
+  Auto-execute: web_search, query_memory, query_knowledge
+
+BENEFITS:
+  ✓ Safety (prevents mistakes)
+  ✓ Control (user decides)
+  ✓ Transparency (user sees what's happening)
+  ✓ Trust (system won't surprise user)
+  ✓ Accountability (logged decisions)
+
+ALTERNATIVES CONSIDERED:
+  Option A: Always confirm
+    - Safest
+    - Slow, annoying UX
+    - Decision: TOO SLOW
+  
+  Option B: Never confirm
+    - Fastest
+    - High risk of mistakes
+    - Loss of control
+    - Decision: TOO RISKY
+  
+  Option C: Only confirm destructive
+    - Current approach
+    - Balances speed and safety
+    - Decision: CHOSEN (sweet spot)
+
+DECISION: Confirmation gate for destructive actions only
+
+---
+
+=== DECISION: KNOWLEDGE BASE CHUNKING STRATEGY ===
+
+DECISION: 500 chars per chunk, 50-char overlap
+DATE: 2025-12-18
+CONTEXT:
+  Need to chunk large documents for semantic search
+  Chunks too small: lose context
+  Chunks too large: don't fit in context window
+
+CHOSEN STRATEGY: 500 chars, 50-char overlap
+  - Each chunk: ~500 characters
+  - Overlap: ~50 characters between chunks
+  - Result: ~1000-2000 chunks from typical document
+  - Fits in LLM context window
+  - Good granularity for search
+
+EXAMPLES:
+  Document: 5000 chars
+  → Chunks: ~10 chunks (with overlap)
+  → Search retrieves top-3
+  → LLM gets ~1500 chars of context
+  → Fits comfortably in any model's context window
+
+ALTERNATIVES CONSIDERED:
+  Option A: 1000 chars per chunk
+    - More context per chunk
+    - Better for coherence
+    - Slower search, more noise
+    - Decision: HARDER TO SEARCH PRECISELY
+  
+  Option B: 300 chars per chunk
+    - More granular
+    - Faster search
+    - More chunks to retrieve
+    - Decision: MIGHT LOSE CONTEXT
+  
+  Option C: Sentence-based chunks
+    - Natural boundaries
+    - Variable sizes
+    - Hard to control uniformity
+    - Decision: LESS PREDICTABLE
+
+DECISION: 500/50 is Goldilocks zone (not too hot, not too cold)
+
+---
+
+=== DECISION: MEMORY BACKEND ===
+
+DECISION: Use JSON files for memory/knowledge storage
+DATE: 2025-12-18
+CONTEXT:
+  Need persistent storage for conversations and knowledge
+  Could use SQL, document DB, or files
+  Current scale: <10k interactions
+
+CHOSEN APPROACH: JSON FILES
+  - conversation_history.json: Past interactions
+  - chunks.jsonl: Knowledge chunks (one per line)
+  - metadata.jsonl: Chunk metadata
+
+BENEFITS:
+  ✓ Simple (no database server)
+  ✓ Human-readable (can inspect with text editor)
+  ✓ Portable (copy file to backup)
+  ✓ Version-controllable (git-friendly)
+  ✓ Zero setup (works out of box)
+
+ALTERNATIVES CONSIDERED:
+  Option A: PostgreSQL / MongoDB
+    - Scales to millions of records
+    - Rich querying
+    - Requires database server setup
+    - More complex
+    - Decision: OVERKILL FOR CURRENT SCALE
+  
+  Option B: SQLite
+    - Good middle ground
+    - Still requires setup/maintenance
+    - Not ideal for vector operations
+    - Decision: OVER-ENGINEERED
+  
+  Option C: JSON files (current)
+    - Simple
+    - Sufficient for current scale
+    - Can migrate to DB later
+    - Decision: CHOSEN (perfect for MVP)
+
+MIGRATION PATH:
+  If scale reaches 100k+ interactions:
+  1. Create SQLite schema
+  2. Migrate JSON → SQLite
+  3. Update queries to use SQL
+  4. Backward compatible (system still works)
+
+DECISION: JSON files until scale demands migration
+
+---
+
+=== DECISION: LOGGING & AUDIT TRAIL ===
+
+DECISION: Structured JSON logging with session IDs
+DATE: 2025-12-18
+CONTEXT:
+  Need audit trail (accountability, debugging)
+  Could use plain text, binary, or structured format
+  Users need to inspect logs easily
+
+CHOSEN APPROACH: STRUCTURED JSON
+  Format: One JSON object per line (JSONL)
+  Fields: timestamp, session_id, event_type, action, result, etc.
+  Storage: Plain text files (human-readable)
+  Parsing: Easy with jq, Python, or any JSON tool
+
+EXAMPLE LOG ENTRY:
+  {
+    "timestamp": "2025-12-18T14:23:45Z",
+    "session_id": "abc123def456",
+    "event_type": "action_execution",
+    "action": "save_note",
+    "parameters": {"content": "Meeting at 3pm"},
+    "user_decision": "confirmed",
+    "result": "success",
+    "duration_ms": 245
+  }
+
+BENEFITS:
+  ✓ Structured (machine-parseable)
+  ✓ Human-readable (can view as text)
+  ✓ Append-only (fast writes)
+  ✓ Traceable (session ID links events)
+  ✓ Debuggable (full context in each entry)
+
+ALTERNATIVES CONSIDERED:
+  Option A: Plain text logs
+    - Human-readable
+    - Hard to parse programmatically
+    - Decision: NO STRUCTURE
+  
+  Option B: Binary logging
+    - Compact
+    - Hard to inspect without tools
+    - Decision: NOT TRANSPARENT
+  
+  Option C: Structured JSON (current)
+    - Best of both worlds
+    - Readable + parseable
+    - Decision: CHOSEN
+
+DECISION: JSONL format for logging
+
+---
+
+=== DECISION: OFFLINE-FIRST vs CLOUD-FIRST ===
+
+DECISION: Offline-first (no cloud APIs by default)
+DATE: 2025-12-18
+CONTEXT:
+  Could use cloud LLMs (OpenAI, Anthropic)
+  Could use cloud embeddings (OpenAI)
+  Could use cloud speech-to-text (Google, AWS)
+  Trade-off: Cloud = better quality, offline = better privacy
+
+CHOSEN APPROACH: OFFLINE-FIRST
+  - LLM: Local (Ollama + Llama 3.1)
+  - Embeddings: Local (SentenceTransformer)
+  - Speech-to-text: Local (Faster-Whisper)
+  - Web search: Allowed (necessary for current info)
+
+PHILOSOPHY:
+  Privacy by default
+  All user data stays on machine
+  No API keys required
+  Works without internet (mostly)
+  User has full control
+
+BENEFITS:
+  ✓ Privacy (no data sent externally)
+  ✓ Cost (zero per-API charges)
+  ✓ Speed (no network latency)
+  ✓ Autonomy (user owns system)
+  ✓ Trust (transparent, auditable)
+
+TRADEOFF:
+  ✗ Quality: Smaller models than cloud
+  ✗ Currency: No real-time internet knowledge
+  ✗ Complexity: Local setup required
+
+ALTERNATIVES CONSIDERED:
+  Option A: Cloud-first
+    - Better quality
+    - Real-time knowledge
+    - Requires API keys & $$
+    - Privacy concerns
+    - Internet dependency
+    - Decision: CONTRADICTS PRIVACY GOAL
+  
+  Option B: Hybrid (local + cloud fallback)
+    - Complexity
+    - Some online data required
+    - More moving parts
+    - Decision: OVERENGINEERED FOR MVP
+  
+  Option C: Offline-first (current)
+    - Privacy, cost, simplicity
+    - Trade acceptable quality for principles
+    - Decision: CHOSEN (aligns with values)
+
+MIGRATION PATH:
+  If user wants cloud options:
+  1. Add config flag (ENABLE_CLOUD_APIS)
+  2. Support OpenAI embeddings as fallback
+  3. Support cloud LLM as option
+  4. Keep offline as default
+  5. User chooses their preference
+
+DECISION: Offline-first, with future option for cloud
+
+---
+
+=== DECISION: DEPLOYMENT STRATEGY ===
+
+DECISION: Single-machine, no server (user installs locally)
+DATE: 2025-12-18
+CONTEXT:
+  Could build web server (SaaS)
+  Could deploy to cloud
+  Could distribute via app store
+  Current: User runs on their machine
+
+CHOSEN APPROACH: LOCAL INSTALLATION
+  User downloads code
+  User runs: python run.py
+  System listens on their machine
+  Web UI optional (local only)
+
+BENEFITS:
+  ✓ Privacy (no servers storing data)
+  ✓ Control (user owns everything)
+  ✓ Simple (no cloud infrastructure)
+  ✓ Cheap (no hosting costs)
+
+TRADEOFF:
+  ✗ Setup: User must install Python, dependencies
+  ✗ Accessibility: No mobile app (yet)
+  ✗ Sync: Can't access from multiple devices
+  ✗ Support: Limited (self-support)
+
+FUTURE OPTIONS:
+  1. Package as executable (.exe, .dmg)
+  2. Docker container
+  3. Multi-device sync (peer-to-peer)
+  4. Optional cloud backup (opt-in)
+
+DECISION: Local-first, packages/containers for distribution
+
+---
+
+=== SUMMARY OF PHILOSOPHY ===
+
+LUMO 2025-12-18 is designed around:
+1. PRIVACY: Data stays on user's machine
+2. SIMPLICITY: Minimal dependencies, clear architecture
+3. COST: Free, open-source, no APIs
+4. CONTROL: User owns and operates the system
+5. TRANSPARENCY: Full audit trail, explainable decisions
+6. EXTENSIBILITY: Easy to add knowledge, actions, models
+
+These principles guide all technical decisions.
+If a choice violates these principles, reconsider it.

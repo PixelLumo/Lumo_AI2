@@ -1,0 +1,152 @@
+LUMO AI SYSTEM OVERVIEW
+
+=== WHAT IS LUMO? ===
+LUMO is a JARVIS-style voice AI assistant that runs locally on your machine.
+It combines speech recognition, language models, semantic memory, and action execution
+into a cohesive intelligent agent.
+
+=== CORE CAPABILITIES ===
+
+1. VOICE INTERACTION
+   - Listens for wake word "lumo"
+   - Uses Faster-Whisper for offline speech-to-text
+   - VAD (voice activity detection) to handle silence
+   - Outputs transcribed text
+
+2. UNDERSTANDING
+   - Local LLM (Ollama + Llama 3.1) for language understanding
+   - RAG (Retrieval-Augmented Generation) for knowledge context
+   - Semantic memory via FAISS vector search
+   - Intent detection and action routing
+
+3. ACTIONS
+   - Web search integration
+   - Note-taking and persistence
+   - Custom action execution
+   - Confirmation gates for destructive operations
+
+4. LEARNING
+   - Tracks interaction patterns
+   - Measures wake word detection accuracy
+   - Monitors action success rates
+   - Auto-tunes system thresholds
+   - Provides improvement suggestions
+
+5. LOGGING
+   - Session-based event tracking
+   - Comprehensive audit trail
+   - Structured JSON logging
+   - Performance metrics
+
+=== ARCHITECTURE LAYERS ===
+
+LAYER 1: INPUT (Audio/Text)
+├─ Microphone input
+├─ STT (speech-to-text)
+└─ Wake word detection
+
+LAYER 2: REASONING (LLM + Memory)
+├─ Vector semantic search (FAISS)
+├─ Knowledge retrieval (RAG)
+├─ LLM inference (Ollama)
+└─ Intent detection
+
+LAYER 3: EXECUTION (Actions + Confirmation)
+├─ Action executor
+├─ Confirmation state machine
+└─ Error handling
+
+LAYER 4: FEEDBACK (Learning + Logging)
+├─ Event logging
+├─ Performance tracking
+├─ System tuning
+└─ Improvement analysis
+
+=== KEY TECHNICAL COMPONENTS ===
+
+MEMORY:
+  - Engine: FAISS vector database
+  - Embedding model: sentence-transformers (all-MiniLM-L6-v2)
+  - Storage: JSON file (persistent)
+  - Purpose: Find contextually relevant past interactions
+
+LLM:
+  - Backend: Ollama (local, no API keys)
+  - Model: Llama 3.1
+  - System prompt: JARVIS personality (concise, action-focused)
+  - RAG: Augment with knowledge base chunks
+
+ACTIONS:
+  - web_search: Query the internet
+  - save_note: Persistent note storage
+  - execute_action: Extensible custom actions
+  - All actions are logged and can require confirmation
+
+LEARNING:
+  - Tracks success rates
+  - Monitors wake word accuracy
+  - Identifies patterns in failures
+  - Auto-tunes system parameters
+  - Generates improvement recommendations
+
+=== DATA FLOW ===
+
+USER SPEAKS
+  ↓
+TRANSCRIBE (STT)
+  ↓
+PARSE INTENT
+  ├─→ Search past interactions (FAISS)
+  ├─→ Retrieve knowledge base (RAG)
+  └─→ Infer with LLM (Ollama)
+  ↓
+GENERATE RESPONSE
+  ├─→ Text (speak via TTS)
+  └─→ Action (execute with confirmation if needed)
+  ↓
+LOG & LEARN
+  ├─→ Track success/failure
+  ├─→ Update statistics
+  └─→ Improve for next time
+
+=== SYSTEM CHARACTERISTICS ===
+
+OFFLINE-FIRST:
+  No cloud dependencies. All processing local.
+
+TRANSPARENT:
+  Every action is logged. Full audit trail.
+
+MODULAR:
+  Components are independent and testable.
+
+ADAPTIVE:
+  Learns from interactions. Improves over time.
+
+SAFE:
+  Destructive actions require explicit confirmation.
+
+=== GETTING STARTED ===
+
+1. Configure Ollama with Llama 3.1
+2. Add knowledge documents to knowledge/raw/
+3. Run: python knowledge/ingest.py && python knowledge/index.py
+4. Start LUMO: python run.py
+5. Speak: "Lumo, <command>"
+
+=== EXTENDING LUMO ===
+
+ADD KNOWLEDGE:
+  1. Create .txt file in knowledge/raw/
+  2. Run knowledge/ingest.py to chunk
+  3. Run knowledge/index.py to index with FAISS
+
+ADD ACTIONS:
+  1. Implement in core/planner.py or a new module
+  2. Update LLM system prompt if needed
+  3. Add to logging in core/logger.py
+
+CUSTOMIZE LLM:
+  1. Modify SYSTEM_PROMPT in core/llm.py
+  2. Adjust model in Ollama settings
+  3. Tune RAG context size (k parameter)

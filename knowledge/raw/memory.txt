@@ -1,0 +1,6 @@
+
+The LUMO memory system uses FAISS (Facebook AI Similarity Search) for vector embeddings.
+It stores conversation history in a FAISS index for fast semantic retrieval.
+Memory embeddings are 768-dimensional vectors from sentence transformers.
+You can search past conversations by semantic similarity, not just keywords.
+Memory is persistent in memory/conversation_history.json.

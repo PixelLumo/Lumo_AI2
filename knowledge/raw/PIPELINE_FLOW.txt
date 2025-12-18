@@ -1,0 +1,229 @@
+LUMO AI PIPELINE FLOW - STEP BY STEP
+
+=== THE COMPLETE REQUEST-RESPONSE CYCLE ===
+
+PHASE 1: AUDIO CAPTURE & PROCESSING
+────────────────────────────────────
+
+1. LISTEN FOR WAKE WORD
+   - Microphone stream at 16kHz sample rate
+   - WebRTC VAD detects speech activity
+   - Look for "lumo" keyword in transcription
+   - Status: waiting for command
+
+2. CAPTURE VOICE INPUT
+   - Once wake word detected, record audio
+   - Silence detection: stop after 2+ seconds quiet
+   - Buffer audio chunks (typically 5-10 seconds)
+   - Timestamp for logging
+
+3. SPEECH-TO-TEXT (STT)
+   - Use Faster-Whisper model
+   - Convert audio → text transcription
+   - Extract duration in seconds
+   - Output: user_text, duration
+   Example: "Lumo, what's the weather in New York?"
+
+---
+
+PHASE 2: INTENT PARSING & RETRIEVAL
+────────────────────────────────────
+
+4. EXTRACT INTENT
+   - Strip wake word from transcription
+   - Normalize: lowercase, punctuation, extra spaces
+   - Result: "what's the weather in new york?"
+
+5. SEMANTIC MEMORY SEARCH
+   - Embed user query with SentenceTransformer
+   - Search FAISS index for similar past interactions
+   - Retrieve top-k (default: 3) chunks
+   - Add as context for LLM
+   Example: Find past weather queries
+
+6. KNOWLEDGE BASE RETRIEVAL (RAG)
+   - Embed same query
+   - Search knowledge/index.faiss
+   - Retrieve relevant documents
+   - Build context block from chunks
+   Example: "Weather data shows typical patterns for..."
+
+7. PREPARE MESSAGE HISTORY
+   - Start with system prompt (JARVIS personality)
+   - Add retrieved context (memory + knowledge)
+   - Add user query as latest message
+   - Include past turn history (optional)
+   Example:
+     System: "You are LUMO..."
+     System: "[Knowledge: Weather patterns...]"
+     User: "what's the weather in new york?"
+
+---
+
+PHASE 3: LLM INFERENCE
+──────────────────────
+
+8. SEND TO OLLAMA
+   - POST to http://localhost:11434/api/chat
+   - Model: Llama 3.1
+   - Messages: [system, context, user]
+   - Timeout: 60 seconds
+   - Stream: false (wait for full response)
+
+9. LLM PROCESSES
+   - Llama 3.1 reads context + query
+   - Generates response or action
+   - Output: text OR function call
+   Example output: "The weather in New York is 45°F and cloudy"
+   Example action: {"action": "web_search", "query": "NYC weather"}
+
+10. PARSE RESPONSE
+    - Check if text or function call
+    - If text: prepare for TTS output
+    - If action: extract action name + parameters
+    - Log for debugging
+
+---
+
+PHASE 4: ACTION EXECUTION (IF NEEDED)
+─────────────────────────────────────
+
+11. CHECK ACTION TYPE
+    - READ-ONLY (web_search): Execute immediately
+    - DESTRUCTIVE (save_note): Require confirmation
+    - Custom: Check in planner rules
+
+12. CONFIRMATION GATE (if needed)
+    - Display action to user
+    - Set 10-second timeout
+    - Wait for user approval
+    - Status: confirmed or rejected
+
+13. EXECUTE ACTION
+    - web_search: Query search engine
+    - save_note: Write to persistent storage
+    - execute_action: Call registered handler
+    - Catch exceptions, return result
+
+14. LOG ACTION
+    - Action name
+    - Parameters (args)
+    - Result (success/failure)
+    - Duration in milliseconds
+    - Log entry to core/logger.py
+
+---
+
+PHASE 5: RESPONSE GENERATION & OUTPUT
+──────────────────────────────────────
+
+15. PREPARE FINAL RESPONSE
+    - If LLM gave text: use directly
+    - If action executed: "I saved your note" or "Found X results"
+    - Include action results if relevant
+    - Keep concise (JARVIS style)
+
+16. TEXT-TO-SPEECH (TTS)
+    - Use Piper TTS (optional, if configured)
+    - Convert response text → audio
+    - Play through speakers
+    - Log TTS execution
+
+17. DISPLAY/LOG
+    - Print to console
+    - Save to session log
+    - Store in memory (for future context)
+    - Timestamp: full cycle time
+
+---
+
+PHASE 6: LEARNING & FEEDBACK
+────────────────────────────
+
+18. TRACK METRICS
+    - Wake word: detected? (yes/no)
+    - STT: confidence score
+    - LLM: response latency
+    - Action: success/failure
+    - User: satisfied? (implicit from next query)
+
+19. UPDATE LEARNING SYSTEM
+    - Log to learning/conversation_history.json
+    - Analyze patterns:
+      - What actions fail most?
+      - What queries return best results?
+      - When is wake word missed?
+    - Suggest improvements
+
+20. AUTO-TUNE (optional)
+    - Adjust VAD thresholds if needed
+    - Modify wake word sensitivity
+    - Change RAG context size if helpful
+    - Adjust LLM temperature/parameters
+
+21. STORE FOR FUTURE
+    - Add interaction to memory (FAISS)
+    - Persist in JSON storage
+    - Next time similar query comes: will retrieve this
+
+---
+
+=== EXAMPLE WALKTHROUGH ===
+
+USER: "Lumo, save a note about the FAISS database"
+
+FLOW:
+  1. [AUDIO] Capture "lumo, save a note about the faiss database"
+  2. [STT] Transcribe to text
+  3. [INTENT] Extract: "save a note about the faiss database"
+  4. [MEMORY] Search past notes → find similar topics
+  5. [KNOWLEDGE] Retrieve docs about FAISS → load context
+  6. [LLM] Ollama sees: [system] [memory] [knowledge] [user query]
+  7. [OUTPUT] Llama responds: {"action": "save_note", "content": "..."}
+  8. [GATE] Ask confirmation: "Save this note? (Y/n)"
+  9. [EXECUTE] User confirms → write to storage
+  10. [LOG] Record: action=save_note, status=success, duration=245ms
+  11. [SPEAK] "Note saved" (via TTS)
+  12. [LEARN] Add interaction to history, update metrics
+  13. [NEXT] User's next similar query will find this note via memory search
+
+---
+
+=== PERFORMANCE TARGETS ===
+
+Wake Word Detection: <500ms
+STT (transcription): 1-3 seconds
+Memory Search: <100ms
+LLM Inference: 2-10 seconds
+Total Latency: 3-15 seconds (reasonable for voice AI)
+
+---
+
+=== KEY DESIGN DECISIONS ===
+
+CHUNKED KNOWLEDGE:
+  Documents split into 500-char chunks with overlap
+  Prevents "context window overflow"
+  Semantic search finds best chunks
+
+FAISS VECTOR SEARCH:
+  L2 distance metric for similarity
+  Fast (O(log n) with indexing)
+  Scales to millions of chunks
+
+CONFIRMATION GATE:
+  Destructive operations blocked until approved
+  Safety mechanism for critical actions
+  Logged for accountability
+
+OFFLINE LLM:
+  No API calls, no rate limits
+  Privacy: all data stays local
+  Cost: zero
+  Trade-off: smaller model (Llama 3.1 7B)
+
+CONTINUOUS LEARNING:
+  Every interaction improves future performance
+  Thresholds auto-adjust
+  New interactions added to memory
+  System becomes "smarter" over time

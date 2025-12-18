@@ -1,0 +1,220 @@
+LUMO AI SAFETY GUARDRAILS
+
+=== CONFIRMATION GATE MECHANISM ===
+
+PURPOSE:
+  Prevent accidental or malicious execution of destructive actions
+  Give user explicit control over critical operations
+  Maintain audit trail of user decisions
+
+HOW IT WORKS:
+  1. LLM generates action suggestion (save_note, execute_action, etc.)
+  2. System checks: is this action destructive?
+  3. If YES: block execution, show to user, wait for approval
+  4. If NO: execute immediately (web_search, query, etc.)
+  5. Log user decision (approved/rejected) + timestamp
+
+DESTRUCTIVE ACTIONS (require confirmation):
+  - save_note: Persists data
+  - execute_action: Runs custom code/scripts
+  - delete_note: Removes data
+  - clear_history: Erases interaction logs
+
+READ-ONLY ACTIONS (execute immediately):
+  - web_search: Query internet
+  - query_memory: Search past interactions
+  - query_knowledge: Search knowledge base
+  - list_notes: View existing data
+
+CONFIRMATION PARAMETERS:
+  - Timeout: 10 seconds
+  - Default behavior if no response: REJECT (fail safe)
+  - User says "yes", "confirm", "approve": execute
+  - User says "no", "cancel", "reject": abort
+  - Timeout without response: abort silently
+
+=== INPUT VALIDATION ===
+
+RULE: NONE SHALL PASS EMPTY INPUT
+  - Empty transcription: ignore (continue listening)
+  - None text: ignore (don't process null)
+  - Whitespace-only: treat as empty
+  - Very short (<3 chars): likely garbage, ignore
+
+RULE: SANITIZE USER INPUT
+  - Remove leading/trailing whitespace
+  - Normalize punctuation
+  - Strip wake word from beginning
+  - Convert to lowercase for intent matching
+  - Never execute raw input (always process through LLM)
+
+RULE: VALIDATE ACTION PARAMETERS
+  - web_search: validate query length (>0, <500 chars)
+  - save_note: validate content (>0, <10000 chars)
+  - execute_action: whitelist allowed actions only
+  - Reject: parameters with shell metacharacters
+
+=== EXCEPTION HANDLING ===
+
+RULE: CATCH ALL, INFORM USER
+  - Wrap all risky operations in try-except
+  - Never silently swallow exceptions
+  - Return meaningful error to user
+  - Log full traceback for debugging
+
+RULE: NETWORK FAILURES
+  - If web_search fails: inform user "couldn't search"
+  - If Ollama unavailable: inform "LLM offline"
+  - If memory unavailable: inform "memory system down"
+  - Retry once with exponential backoff
+
+RULE: RESOURCE EXHAUSTION
+  - If CPU high: slow down FAISS searches
+  - If memory low: prune old interactions
+  - If disk full: inform user, stop saving
+  - Never crash on resource limits
+
+=== PRIVACY & DATA PROTECTION ===
+
+RULE: LOCAL-ONLY PROCESSING
+  - No data sent to cloud (unless explicit web_search)
+  - All processing on user's machine
+  - User owns all interaction history
+  - User can delete/export logs anytime
+
+RULE: CONVERSATION PRIVACY
+  - Store conversations in local JSON only
+  - Encrypt at rest (optional future enhancement)
+  - Don't share with third parties
+  - Inform user what's being logged
+
+RULE: LEARNED PATTERNS
+  - Learning system analyzes interactions
+  - Results inform suggestions/tuning only
+  - No personal info sent externally
+  - User can opt-out of learning
+
+=== CONFIRMATION SCENARIOS ===
+
+SCENARIO 1: Save a Note
+  User: "Lumo, save a note about project XYZ"
+  System: "Save note: 'About project XYZ...'? (Y/n)"
+  User: "yes"
+  System: [executes save_note, logs decision]
+
+SCENARIO 2: Timeout (User Doesn't Respond)
+  System: [waits 10 seconds]
+  [no response]
+  System: "Cancelled (no response)" [logs rejection]
+
+SCENARIO 3: User Rejects
+  User: "Lumo, save that"
+  System: "Save...? (Y/n)"
+  User: "no"
+  System: "Cancelled" [logs rejection]
+
+SCENARIO 4: Ambiguous Intent
+  User: "Lumo, do the thing"
+  System: "I didn't understand. Did you want to:
+           A) Search the web
+           B) Save a note
+           Or something else?"
+  User: [clarifies]
+
+=== LOGGING FOR ACCOUNTABILITY ===
+
+RULE: EVERYTHING IS LOGGED
+  - Every user input (transcription + timestamp)
+  - Every action (name, parameters, result)
+  - Every decision (user approval/rejection)
+  - Every error (type, stack trace, recovery)
+  - Every performance metric (latency, success rate)
+
+RULE: LOG FORMAT
+  - Structured JSON (parseable, not plain text)
+  - Include session ID for tracking
+  - Include user ID (optional, for multi-user)
+  - Include source (audio, text, api, etc.)
+  - Include outcome (success, failure, timeout)
+
+RULE: LOG ACCESS
+  - User can read logs anytime
+  - User can export logs to backup
+  - User can anonymize logs (remove transcription)
+  - User can delete logs (with confirmation)
+  - System never auto-deletes logs
+
+EXAMPLE LOG ENTRY:
+  {
+    "timestamp": "2025-12-18T14:23:45Z",
+    "session_id": "abc123",
+    "event_type": "action_execution",
+    "action": "save_note",
+    "parameters": {"content": "Project deadline next week"},
+    "user_decision": "confirmed",
+    "result": "success",
+    "duration_ms": 245,
+    "error": null
+  }
+
+=== INJECTION ATTACK PREVENTION ===
+
+RULE: NO SHELL INJECTION
+  - Never pass user input directly to os.system()
+  - Use subprocess with argument list, not string
+  - Validate all file paths (no ../ allowed)
+  - Escape web search queries
+
+RULE: NO PROMPT INJECTION
+  - Don't allow user to modify system prompt
+  - Keep system prompt separate from user messages
+  - Validate LLM input for suspicious patterns
+  - Log any attempted manipulation
+
+RULE: NO SQL INJECTION
+  - Use parameterized queries (if DB used)
+  - Never concatenate user input into queries
+  - Validate input types
+
+=== PERMISSION MODEL ===
+
+IMPLICIT PERMISSIONS (user can always do):
+  - Query memory
+  - Search knowledge base
+  - Ask questions
+  - Get help/documentation
+
+EXPLICIT PERMISSIONS (requires confirmation):
+  - Save data
+  - Delete data
+  - Execute custom actions
+  - Modify system settings
+
+FUTURE PERMISSIONS (if multi-user added):
+  - Admin: can delete any user's data
+  - User: can only access own data
+  - Guest: read-only access
+
+=== INCIDENT RESPONSE ===
+
+IF SYSTEM BEHAVES UNEXPECTEDLY:
+  1. Stop execution (pause on error)
+  2. Log full context (input, state, error)
+  3. Inform user with error message
+  4. Suggest manual check (review logs)
+  5. Continue listening (don't hang)
+  6. Alert user to check logs (on next interaction)
+
+IF USER SUSPECTS ABUSE:
+  1. User can stop system immediately
+  2. User can review full audit log
+  3. User can isolate system (disconnect network)
+  4. User can restore from backup
+  5. User can report issues (GitHub/email)
+
+IF PERFORMANCE DEGRADES:
+  1. Log increased latency
+  2. Check system resources (CPU, memory, disk)
+  3. If resource-constrained: prune old data
+  4. If software bug: check error logs
+  5. Restart system if necessary

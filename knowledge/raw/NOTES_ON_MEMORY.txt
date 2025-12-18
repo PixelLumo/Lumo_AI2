@@ -1,0 +1,203 @@
+NOTES ON MEMORY SYSTEM
+
+=== FAISS VECTOR DATABASE ===
+
+WHAT IS FAISS?
+  FAISS = Facebook AI Similarity Search
+  A library for efficient similarity search and clustering of dense vectors
+  Designed for fast searching in high-dimensional spaces
+  Used at scale by Meta, Spotify, and other major companies
+
+WHY FAISS FOR MEMORY?
+  1. SPEED: Semantic search in milliseconds (not seconds)
+  2. SIMPLICITY: No separate database server needed
+  3. LOCAL: Runs entirely on user's machine
+  4. LIGHTWEIGHT: Index stored as single binary file
+  5. BATTLE-TESTED: Used at scale in production systems
+
+HOW IT WORKS:
+  1. Each chunk gets embedded as 384-dimensional vector
+  2. Vectors stored in FAISS index
+  3. When querying: compute L2 distance between query vector and all vectors
+  4. Return top-k (default: 3) nearest neighbors
+  5. Total time: <100ms for 10,000 chunks
+
+=== MEMORY FLOW ===
+
+STORING:
+  User interaction → Embed with SentenceTransformer → Add to FAISS → Persist to disk
+
+QUERYING:
+  User query → Embed with SentenceTransformer → Search FAISS → Return chunks
+
+EXAMPLE:
+  User: "How do I use notes?"
+  Query embedding: [0.12, -0.45, 0.89, ...]  (384 dimensions)
+  FAISS search: Find 3 vectors closest to query embedding
+  Results:
+    Chunk 1: "save_note action lets you persist..."
+    Chunk 2: "Notes are stored in JSON file..."
+    Chunk 3: "User confirmation required for save_note..."
+
+=== MEMORY PERSISTENCE ===
+
+FILES:
+  - knowledge/index.faiss: Binary FAISS index (read-only after build)
+  - knowledge/metadata.jsonl: Chunk content + source (human-readable)
+  - memory/conversation_history.json: Interaction logs
+
+REBUILDING:
+  When you add new knowledge:
+  1. Run knowledge/ingest.py (chunks documents)
+  2. Run knowledge/index.py (builds new FAISS index)
+  3. Old index is overwritten
+  4. No backward compatibility needed (stateless chunks)
+
+=== MEMORY LIMITATIONS & TRADEOFFS ===
+
+LIMITATION 1: IN-MEMORY ON STARTUP
+  Problem: Index loaded into RAM when system starts
+  Impact: Large knowledge bases (100k+ chunks) require more RAM
+  Solution: Could use FAISS GPU mode or disk-based alternatives
+
+LIMITATION 2: APPROXIMATE NEAREST NEIGHBORS
+  Problem: L2 distance doesn't always capture meaning perfectly
+  Example: "cat" and "feline" are semantically similar but different vectors
+  Solution: Mitigated by using well-trained embeddings (SentenceTransformer)
+
+LIMITATION 3: STATIC INDEX
+  Problem: Can't add/remove chunks after building index
+  Impact: Requires full index rebuild when knowledge changes
+  Solution: Fast rebuild (milliseconds to seconds), acceptable for periodic updates
+
+LIMITATION 4: NO FILTERING
+  Problem: Can't filter results by date, source, or metadata
+  Example: Can't ask "show me notes from last week"
+  Solution: Could add metadata filtering in future
+
+=== OPTIMIZATION OPPORTUNITIES ===
+
+FUTURE 1: QUANTIZATION
+  Reduce vector dimensions (384 → 128)
+  Faster search, less memory, slightly lower quality
+  Trade-off: speed vs recall
+
+FUTURE 2: INDEXING
+  Current: Linear search (IndexFlatL2)
+  Future: Use IVF (Inverted File) index for faster search on large datasets
+  Reduces search time from O(n) to O(k log n)
+
+FUTURE 3: DISK-BASED INDEX
+  Current: In-memory (fast but RAM-heavy)
+  Future: Memory-mapped (scalable but slower)
+  Could support million-scale chunks
+
+FUTURE 4: METADATA FILTERING
+  Current: Return top-k chunks regardless of metadata
+  Future: Filter by source, date, type before returning
+  Example: "Show notes from last 7 days about project X"
+
+=== MEMORY BEST PRACTICES ===
+
+1. ORGANIZE KNOWLEDGE DOCUMENTS
+   Group related information in same .txt file
+   Helps FAISS find related chunks together
+   Example: "project_guidelines.txt" instead of scattered files
+
+2. CHUNK SIZE MATTERS
+   Current: 500 chars with 50-char overlap
+   Larger chunks (1000 chars): less retrieval calls but more noise
+   Smaller chunks (300 chars): more calls but cleaner results
+   Tune based on your content
+
+3. KEEP KNOWLEDGE FRESH
+   Update documents regularly
+   Rebuild index when significant changes
+   Old knowledge becomes stale over time
+
+4. MONITOR QUALITY
+   Occasionally test: "Can LUMO find the answer to X?"
+   If not found: rephrase document or add keyword synonyms
+   Embeddings work on meaning, but explicit keywords help
+
+5. AVOID HUGE KNOWLEDGE BASES
+   Ingesting 100,000+ chunks takes minutes
+   Searching 100,000+ chunks takes <100ms (still fast)
+   But startup time and disk space grow
+   Recommendation: keep under 50,000 chunks per system
+
+=== MEMORY vs KNOWLEDGE BASE ===
+
+MEMORY (conversation history):
+  - What: Past user interactions
+  - Storage: memory/conversation_history.json
+  - Purpose: Give context to current query
+  - When queried: Return similar past interactions
+  - Grows over time: Yes (new interactions added each session)
+
+KNOWLEDGE BASE (external documents):
+  - What: Documentation, guides, facts
+  - Storage: knowledge/raw/*.txt + knowledge/index.faiss
+  - Purpose: Ground LLM answers in facts
+  - When queried: Return relevant chunks
+  - Grows over time: Only when explicitly added
+
+RELATIONSHIP:
+  Both use FAISS for semantic search
+  Both embedded with SentenceTransformer
+  Both return top-k results to LLM
+  Both are optional (system works without either)
+
+WHEN MEMORY IS MOST USEFUL:
+  - Follow-up questions: "Tell me more about that"
+  - Repeated requests: "Remind me what we discussed"
+  - Personalization: "What did I ask you last week?"
+
+WHEN KNOWLEDGE BASE IS MOST USEFUL:
+  - Factual questions: "How does LUMO work?"
+  - External information: "What's the weather?"
+  - Configuration help: "How do I set up X?"
+
+=== DEBUGGING MEMORY ISSUES ===
+
+ISSUE: Query returns irrelevant chunks
+  Cause: Vector embedding isn't matching semantically
+  Solution: Check SentenceTransformer model quality
+  Fix: Use larger model (all-mpnet-base-v2) if budget allows
+
+ISSUE: Memory grows too large
+  Cause: Conversation history keeps growing
+  Solution: Implement history pruning (remove old interactions)
+  Fix: Keep only last N interactions (e.g., 1000)
+
+ISSUE: Search is slow
+  Cause: FAISS index too large for available RAM
+  Solution: Reduce chunk count or use smaller embeddings
+  Fix: Use indexing (IVF) or disk-based approach
+
+ISSUE: Same results for different queries
+  Cause: Embedding model isn't discriminative enough
+  Solution: Fine-tune embedding model on your domain
+  Fix: Use domain-specific embeddings (future work)
+
+=== MEMORY SECURITY & PRIVACY ===
+
+WHO CAN ACCESS MEMORY?
+  - Local: Only processes on same machine
+  - Network: Not accessible remotely (no server)
+  - Files: Readable by anyone with file access
+
+WHAT'S STORED?
+  - Transcriptions: Full text of user inputs
+  - Embeddings: Vector representations (non-reversible)
+  - Metadata: Source, timestamp, interaction details
+
+CAN IT BE ENCRYPTED?
+  - Currently: No (future enhancement)
+  - Recommendation: Encrypt knowledge/index.faiss at rest
+  - Method: Use LUKS, BitLocker, or file-level encryption
+
+CAN USER DATA BE DELETED?
+  - Yes: Delete memory/conversation_history.json
+  - Yes: Rebuild knowledge/index.faiss without file
+  - Note: Embeddings can't be reversed to original text

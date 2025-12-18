@@ -1,6 +1,11 @@
-faiss-cpu
-numpy
-sentence-transformers
-requests
-flask
+openai
 python-dotenv
+flask
+requests
+sounddevice
+numpy
+faiss-cpu
+faster-whisper
+torch
+scipy
+webrtcvad

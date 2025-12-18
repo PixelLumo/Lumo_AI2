@@ -1,0 +1,6 @@
+
+The learning module tracks interaction patterns and provides improvement suggestions.
+It analyzes wake word detection, success rates, and identifies failure patterns.
+Learning data is stored in learning logs for continuous improvement.
+The system can auto-tune thresholds based on historical performance.
+Learning insights help LUMO become smarter over time.

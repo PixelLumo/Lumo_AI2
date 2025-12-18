@@ -1,0 +1,233 @@
+WHY KEYWORD SPOTTING MATTERS
+
+=== THE WAKE WORD DETECTION PROBLEM ===
+
+THE CHALLENGE:
+  A voice assistant must listen 24/7 to the environment
+  But you don't want it responding to every conversation
+  "Alexa, can you help me?" → "Lumo, what's for dinner?" → "Lumo" appears in TV dialogue
+  How do you know when the user is actually addressing YOU?
+
+THE SOLUTION: WAKE WORD (KEYWORD SPOTTING)
+  Designate a unique wake word: "Lumo"
+  Device listens for this word specifically
+  Only processes audio after wake word detected
+  Ignores background noise, other conversations, TV
+
+=== WHY "LUMO" SPECIFICALLY ===
+
+GOOD WAKE WORD CHARACTERISTICS:
+  ✓ Unique phonetically (not common in English)
+  ✓ Short (1 syllable = easy to trigger)
+  ✓ Distinctive pronunciation (hard to confuse)
+  ✓ Not offensive in any language
+  ✓ Easy to remember
+
+WHY NOT "COMPUTER"?
+  ✗ Too common (appears in conversation frequently)
+  ✗ Two syllables (harder to trigger reliably)
+  ✗ Often mispronounced
+
+WHY NOT "LUMO-AI"?
+  ✗ Too long (multiple syllables = complex model)
+  ✗ Hyphen creates ambiguity in speech
+  ✗ Users will just say "Lumo" anyway
+
+DECISION: "Lumo" is optimal (short, unique, memorable)
+
+=== HOW KEYWORD SPOTTING WORKS ===
+
+METHOD 1: ACOUSTIC MATCHING (Old approach)
+  Pre-record wake word: "Lumo... Lumo... Lumo..." (many times)
+  Compare incoming audio to recorded samples
+  Problem: Doesn't handle different accents, pitches, speeds
+  Result: High false rejection rate
+
+METHOD 2: MACHINE LEARNING (Modern approach)
+  Train classifier on thousands of "Lumo" and "not Lumo" samples
+  Model learns acoustic patterns
+  Can handle variations: accent, pitch, speed, background noise
+  Result: High accuracy, low false positives
+
+METHOD 3: HYBRID (WebRTC VAD + Model)
+  Step 1: Voice Activity Detection (VAD) detects speech
+  Step 2: Extract audio when speech detected
+  Step 3: Run ML classifier on extracted segment
+  Step 4: If >threshold confidence: trigger
+  Benefits: Reduces false positives, saves CPU
+
+LUMO USES: METHOD 3 (Hybrid VAD + Model)
+
+=== VAD (VOICE ACTIVITY DETECTION) ===
+
+WHAT IS VAD?
+  Detects whether audio contains speech or silence
+  Filters out background noise, music, silence
+  Used to reduce CPU and false positives
+
+WHY IMPORTANT FOR WAKE WORD?
+  Without VAD: Listening to every sound (expensive, inaccurate)
+  With VAD: Only listen when speech detected (efficient, accurate)
+  Result: Lower CPU usage, fewer false positives
+
+LUMO IMPLEMENTATION:
+  Uses WebRTC VAD (open-source, efficient)
+  Runs on CPU (no GPU needed)
+  Detects speech with ~95% accuracy
+  Falls back to full audio processing only when speech detected
+
+=== WAKE WORD DETECTION FLOW ===
+
+FLOW DIAGRAM:
+  Audio Stream
+    ↓ (every 10ms chunk)
+  WebRTC VAD: Is this speech?
+    ├─ NO: Discard chunk, continue listening
+    └─ YES: Extract audio segment
+         ↓
+       Transcribe with Faster-Whisper
+         ↓
+       Check: Does text contain "lumo"?
+         ├─ NO: Ignore
+         └─ YES: WAKE WORD DETECTED
+              ↓
+            Start recording user command
+              ↓
+            Process with LLM
+
+=== WAKE WORD ACCURACY METRICS ===
+
+FALSE POSITIVES:
+  "Lumo" said in TV show → System triggers (bad)
+  Rate: Goal <1% (1 false trigger per 100 hours of audio)
+  Mitigation: Train model on negative examples
+
+FALSE NEGATIVES:
+  User says "Lumo" → System doesn't trigger (bad)
+  Rate: Goal <5% (95% detection accuracy)
+  Mitigation: Use robust VAD + strong model
+
+TRADEOFF:
+  Lower threshold: More false positives (annoying)
+  Higher threshold: More false negatives (frustrating)
+  Solution: Find sweet spot (95% accuracy, <1% false positives)
+
+=== WHY NOT ALWAYS LISTEN (WITHOUT WAKE WORD)? ===
+
+OPTION A: NO WAKE WORD (Process all audio)
+  Pros:
+    - No missed commands (100% detection)
+    - Faster response (no delay for wake word)
+  Cons:
+    - High CPU usage (processes constant audio)
+    - Privacy concerns (always recording)
+    - False triggers on similar-sounding words
+    - Processes background noise, TV, other people
+  Result: Not practical
+
+OPTION B: WAKE WORD (Current approach)
+  Pros:
+    - Low CPU usage (only process when triggered)
+    - Better privacy (doesn't always listen)
+    - Few false triggers (selective)
+    - Efficient
+  Cons:
+    - Could miss some commands (if wake word not clear)
+    - Slight delay (need to say wake word first)
+  Result: Best tradeoff
+
+DECISION: WAKE WORD is necessary for practical voice interaction
+
+=== WAKE WORD ALTERNATIVES ===
+
+OPTION 1: MULTIPLE WAKE WORDS
+  "Lumo", "Hey Lumo", "Computer", "Assistant"
+  Pro: More flexible
+  Con: Complex model, higher false positives
+  Decision: Stick with single "Lumo"
+
+OPTION 2: VOICE AUTHENTICATION
+  Only respond to owner's voice
+  Pro: Highest security
+  Con: Too complex, doesn't match use case
+  Decision: Not needed for single-user system
+
+OPTION 3: SPEAKER DIARIZATION
+  Detect when user is addressing you (via context)
+  Pro: Most natural
+  Con: Requires ML model + LLM inference (too slow)
+  Decision: Impractical for real-time voice
+
+=== LEARNING FROM WAKE WORD MISSES ===
+
+CURRENT: Static wake word detector
+FUTURE: Learn from misses
+
+HOW TO IMPROVE:
+  1. Log every false negative: "User said Lumo, system didn't trigger"
+  2. Log confidence scores: "Model was 40% confident (below 60% threshold)"
+  3. Collect data: Gather more examples of "Lumo" with low confidence
+  4. Retrain: Fine-tune model on problematic examples
+  5. Deploy: Update detector with improved model
+
+RESULT: Wake word accuracy improves over time
+
+=== IMPLEMENTATION DETAILS ===
+
+CURRENT IMPLEMENTATION (audio/stt.py):
+  1. Capture audio in 16kHz chunks
+  2. Run WebRTC VAD (detects speech)
+  3. When speech detected: transcribe segment
+  4. Check if "lumo" in transcription (case-insensitive)
+  5. If found: system is triggered, ready for command
+  6. If not found: continue listening
+
+CONFIDENCE METRICS:
+  - VAD confidence: 0-1 (is this speech?)
+  - STT confidence: Not available (Faster-Whisper doesn't provide)
+  - Wake word matching: Binary (found or not found)
+
+IMPROVEMENTS NEEDED:
+  1. Add confidence score to STT
+  2. Log false negatives for analysis
+  3. Implement threshold tuning based on performance
+
+=== PRIVACY IMPLICATIONS ===
+
+WITH WAKE WORD:
+  ✓ Device only processes audio after "Lumo" detected
+  ✓ Background noise ignored
+  ✓ Other people's conversations ignored
+  ✓ Privacy-preserving (mostly local)
+
+WITHOUT WAKE WORD:
+  ✗ Every sound processed (privacy concern)
+  ✗ Constant transcription (energy intensive)
+  ✗ Could capture sensitive info (accidental)
+
+TRUST:
+  Wake word = explicit signal that device should listen
+  User says "Lumo" = clear consent to process audio
+  Respects user autonomy and privacy
+
+=== FUTURE IMPROVEMENTS ===
+
+IMPROVEMENT 1: ON-DEVICE WAKE WORD MODEL
+  Current: Uses text-based detection (transcribe then match)
+  Future: Use audio-based model (detect "Lumo" sound without transcription)
+  Benefit: Even lower latency, lower CPU, better privacy
+
+IMPROVEMENT 2: CUSTOM WAKE WORDS
+  Current: Fixed "Lumo"
+  Future: User can set custom wake word
+  Benefit: Personalization, flexibility
+
+IMPROVEMENT 3: WAKE WORD + SPEAKER VERIFICATION
+  Current: Any voice saying "Lumo" triggers
+  Future: Only owner's voice triggers
+  Benefit: Security, multi-user scenarios
+
+IMPROVEMENT 4: CONTEXT-AWARE WAKE WORD
+  Current: "Lumo" anywhere triggers
+  Future: Detect if user is addressing you (via context)
+  Benefit: More natural interaction

@@ -1,0 +1,158 @@
+LUMO AI SYSTEM RULES
+
+=== CORE BEHAVIORAL RULES ===
+
+RULE 1: CONCISENESS
+  - Keep responses brief (under 100 words for voice)
+  - No unnecessary elaboration
+  - Direct, actionable answers
+  - Mimic JARVIS personality
+
+RULE 2: INTENT-FIRST DECISION MAKING
+  - Parse user intent before responding
+  - If intent is unclear, ask clarifying question
+  - If intent matches an action, execute (with confirmation if needed)
+  - If intent is pure information, use LLM + knowledge base
+
+RULE 3: ACTION EXECUTION PRIORITY
+  - Read-only actions (web_search) execute immediately
+  - Destructive actions (save_note) require explicit confirmation
+  - All action results are logged
+  - If action fails, inform user and suggest alternative
+
+RULE 4: MEMORY & CONTEXT
+  - Always check memory (FAISS) for relevant past interactions
+  - Inject retrieved context into LLM prompt
+  - New interactions automatically added to memory
+  - Context improves future responses on similar queries
+
+RULE 5: KNOWLEDGE BASE AUGMENTATION
+  - Retrieve 3 chunks from knowledge base for complex queries
+  - Prioritize relevant documents (FAISS distance < threshold)
+  - Include source in logs for traceability
+  - Update knowledge base regularly with new documents
+
+RULE 6: CONFIRMATION GATE
+  - Actions requiring confirmation: save_note, execute_action
+  - Timeout: 10 seconds
+  - If user doesn't respond: assume rejection
+  - Log user decision for learning
+
+RULE 7: SILENCE & INACTIVITY
+  - If no wake word: remain listening
+  - If transcription is empty: ignore
+  - If user doesn't speak within timeout: timeout gracefully
+  - Never act on ambiguous or null input
+
+RULE 8: ERROR HANDLING
+  - Catch all exceptions in action executors
+  - Return meaningful error to user
+  - Log full error trace for debugging
+  - Suggest fallback action if primary fails
+
+RULE 9: LOGGING & TRANSPARENCY
+  - Every action logged with timestamp
+  - Session ID for tracking related events
+  - Structured JSON for programmatic access
+  - User can review full audit trail
+
+RULE 10: LEARNING & ADAPTATION
+  - Track success/failure for each action
+  - Update metrics after each interaction
+  - Periodically auto-tune system parameters
+  - Suggest improvements to user when available
+
+=== INTERACTION RULES ===
+
+STARTING A SESSION:
+  1. Initialize session logger with unique ID
+  2. Load memory (FAISS index)
+  3. Load knowledge base (if available)
+  4. Begin listening for wake word
+
+HANDLING USER INPUT:
+  1. Transcribe audio to text
+  2. Extract and normalize intent
+  3. Check confirmation cache (are we waiting for user response?)
+  4. Retrieve memory context (top-3 similar chunks)
+  5. Retrieve knowledge context (top-3 from knowledge base)
+  6. Pass to LLM with full context
+  7. Parse LLM response (text or action)
+  8. Execute or confirm as needed
+
+RESPONDING TO USER:
+  1. If text response: speak via TTS (if available) OR display
+  2. If action response: show confirmation, wait for approval
+  3. Once approved/rejected: log decision
+  4. Add interaction to memory for next time
+  5. Return to listening (go back to STARTING A SESSION)
+
+CLOSING A SESSION:
+  1. Save all logs to file
+  2. Update learning metrics
+  3. Persist memory to disk
+  4. Close any open connections
+
+=== CONTENT RULES ===
+
+WHAT LUMO SHOULD DO:
+  ✓ Answer factual questions
+  ✓ Search the web for current information
+  ✓ Save notes and reminders
+  ✓ Execute configured actions
+  ✓ Explain how the system works
+  ✓ Learn from interactions
+  ✓ Suggest improvements
+
+WHAT LUMO SHOULD NOT DO:
+  ✗ Bypass confirmation gates
+  ✗ Delete data without permission
+  ✗ Make irreversible changes without logging
+  ✗ Share sensitive information publicly
+  ✗ Act on null or ambiguous input
+  ✗ Ignore error conditions
+  ✗ Pretend to have capabilities it doesn't
+
+=== PERFORMANCE RULES ===
+
+RULE: RESPONSE LATENCY
+  - Target: <5 seconds for most queries
+  - Acceptable: 5-10 seconds
+  - Timeout: >15 seconds (inform user)
+
+RULE: MEMORY EFFICIENCY
+  - Limit FAISS search to top-3 results
+  - Limit knowledge base search to top-3 results
+  - Total context window: ~2000 tokens max
+  - Prune old interactions periodically
+
+RULE: ERROR RECOVERY
+  - Retry failed network requests once
+  - Fall back to local LLM if web search fails
+  - Continue listening even if action fails
+  - Never crash on edge case input
+
+=== EXTENSION RULES ===
+
+TO ADD A NEW ACTION:
+  1. Implement in core/planner.py or new module
+  2. Register with LLM system prompt (describe what it does)
+  3. Decide: requires confirmation? (default: yes for destructive)
+  4. Add logging to core/logger.py
+  5. Test with manual invocation
+  6. Add to learning system for tracking
+
+TO ADD KNOWLEDGE:
+  1. Create .txt file in knowledge/raw/
+  2. Run: python knowledge/ingest.py (chunk the text)
+  3. Run: python knowledge/index.py (build FAISS index)
+  4. Test: ask a query related to the knowledge
+  5. Verify: check that chunks are retrieved
+  6. Iterate: refine document structure if needed
+
+TO CUSTOMIZE BEHAVIOR:
+  1. Modify SYSTEM_PROMPT in core/llm.py (for personality)
+  2. Adjust RAG k-parameter in ask_llm_with_knowledge() (for context size)
+  3. Change chunk size in knowledge/ingest.py (for granularity)
+  4. Update confirmation timeout in core/confirmation.py (for patience)
+  5. Test with sample interactions before deploying

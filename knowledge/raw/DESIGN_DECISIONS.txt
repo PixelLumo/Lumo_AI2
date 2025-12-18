@@ -1,0 +1,304 @@
+LUMO AI DESIGN DECISIONS
+
+=== KEY ARCHITECTURAL CHOICES ===
+
+DECISION 1: LOCAL-FIRST ARCHITECTURE
+──────────────────────────────────────
+Choice: Keep all processing local (no cloud APIs)
+Rationale:
+  ✓ Privacy: user data never leaves machine
+  ✓ Reliability: no internet dependency
+  ✓ Cost: zero API charges
+  ✓ Speed: lower latency (no network round-trip)
+  ✗ Tradeoff: smaller models (Llama 3.1 7B vs GPT-4)
+
+Alternative: Cloud-based (OpenAI, Anthropic)
+  + Larger, more capable models
+  - Requires API keys & payments
+  - Privacy concerns (data sent to servers)
+  - Dependent on internet connection
+
+Decision: LOCAL-FIRST wins for privacy, cost, simplicity
+
+---
+
+DECISION 2: OLLAMA FOR LLM BACKEND
+──────────────────────────────────
+Choice: Ollama (self-hosted LLM runner)
+Rationale:
+  ✓ Simple to setup (one command)
+  ✓ Multiple model support
+  ✓ No API keys required
+  ✓ Runs efficiently on consumer hardware
+  ✗ Tradeoff: slower than cloud (no GPU by default)
+
+Alternative: LlamaCPP, Hugging Face Inference
+  + Similar local-first approach
+  - More setup complexity
+  - Harder to switch models
+
+Decision: OLLAMA for ease of use
+
+---
+
+DECISION 3: FAISS FOR VECTOR SEARCH
+────────────────────────────────────
+Choice: FAISS (Facebook AI Similarity Search)
+Rationale:
+  ✓ Fast semantic search (orders of magnitude faster than brute-force)
+  ✓ Lightweight (no separate database server needed)
+  ✓ Battle-tested at scale (Meta uses it)
+  ✓ Simple API
+  ✗ Tradeoff: in-memory index (must reload on restart)
+
+Alternative: Pinecone, Weaviate, Milvus
+  + Full-featured vector DBs
+  - Require separate server/network
+  - More setup complexity
+  - Additional cost
+
+Alternative: SQLite + embedding column
+  + Simpler
+  - Much slower for semantic search
+  - Not designed for vectors
+
+Decision: FAISS for speed + simplicity
+
+---
+
+DECISION 4: SENTENCE-TRANSFORMERS FOR EMBEDDINGS
+─────────────────────────────────────────────────
+Choice: all-MiniLM-L6-v2 (SentenceTransformer model)
+Rationale:
+  ✓ Lightweight (22 MB, runs on CPU)
+  ✓ High-quality embeddings (trained on semantic similarity)
+  ✓ 384-dimensional vectors (good balance of speed/quality)
+  ✓ No API required (local model)
+  ✗ Tradeoff: slower than larger models (OpenAI embeddings)
+
+Alternative: OpenAI embeddings
+  + State-of-the-art quality
+  - Requires API key & payment
+  - Data sent to OpenAI servers
+  - Network dependency
+
+Alternative: TF-Hub models
+  + Lightweight
+  - Less well-optimized for semantic search
+
+Decision: SentenceTransformer for local, open-source simplicity
+
+---
+
+DECISION 5: CHUNKING STRATEGY (500 chars, 50-char overlap)
+──────────────────────────────────────────────────────────
+Choice: Split documents into 500-char chunks with 50-char overlap
+Rationale:
+  ✓ 500 chars fits within LLM context window (even small models)
+  ✓ 50-char overlap prevents losing context at chunk boundaries
+  ✓ Results in ~1000-2000 chunks for reasonable knowledge base
+  ✓ Balances speed (smaller chunks) vs completeness (larger chunks)
+  ✗ Tradeoff: less context per chunk means more retrieval latency
+
+Alternatives:
+  - 1000 chars: less granular, more context per chunk, slower search
+  - 300 chars: more granular, faster search, less context
+  - 100 chars: very granular, very fast, but loses important info
+
+Decision: 500/50 is the "Goldilocks zone"
+
+---
+
+DECISION 6: K=3 FOR KNOWLEDGE RETRIEVAL
+────────────────────────────────────────
+Choice: Retrieve top-3 chunks from knowledge base
+Rationale:
+  ✓ Enough context to answer most queries
+  ✓ Fits in LLM context window (~1500 tokens)
+  ✓ Reduces noise (top-5 or top-10 might include irrelevant chunks)
+  ✓ Reasonable latency (FAISS search is very fast)
+  ✗ Tradeoff: less context = sometimes miss relevant info
+
+Alternative: K=1 (most relevant only)
+  + Very fast, minimal context
+  - High chance of missing relevant information
+
+Alternative: K=10 (comprehensive)
+  + Better coverage
+  - More noise, larger context window, slower
+
+Decision: K=3 balances relevance and completeness
+
+---
+
+DECISION 7: CONFIRMATION GATE FOR DESTRUCTIVE ACTIONS
+──────────────────────────────────────────────────────
+Choice: Require explicit user approval for save_note, delete, etc.
+Rationale:
+  ✓ Prevents accidental data loss
+  ✓ User maintains control
+  ✓ Safety-first design
+  ✓ Builds trust (user knows system won't surprise them)
+  ✗ Tradeoff: slows down workflow (user must confirm each action)
+
+Alternative: Auto-confirm all actions
+  + Faster workflow
+  - Higher risk of mistakes
+  - User loses control
+
+Alternative: Only confirm deletes
+  + Compromise approach
+  - Inconsistent UX
+
+Decision: Confirm DESTRUCTIVE actions (write/delete), auto-execute READ-ONLY (search/query)
+
+---
+
+DECISION 8: 10-SECOND CONFIRMATION TIMEOUT
+────────────────────────────────────────────
+Choice: If user doesn't confirm within 10 seconds, reject action
+Rationale:
+  ✓ 10 seconds is enough time for user to respond
+  ✓ Prevents accidental auto-confirmation if user ignores
+  ✓ Default-deny is safer than default-allow
+  ✗ Tradeoff: user must act quickly (might be annoying if AFK)
+
+Alternative: No timeout
+  + User can take their time
+  - System stalls waiting for response
+  - Might accidentally execute if user forgets
+
+Alternative: 30 seconds
+  + More time
+  - Too much time, feels slow
+
+Decision: 10 seconds is reasonable for voice interaction
+
+---
+
+DECISION 9: JSON LOGGING FORMAT
+────────────────────────────────
+Choice: Store logs in structured JSON, one object per line (JSONL)
+Rationale:
+  ✓ Machine-parseable (can analyze programmatically)
+  ✓ Structured (fields are defined)
+  ✓ Human-readable (can view with jq or any JSON tool)
+  ✓ Append-only (fast, doesn't require locking)
+  ✗ Tradeoff: larger file size than binary format
+
+Alternative: Plain text logs
+  + Smaller files
+  - Hard to parse, no structure
+
+Alternative: SQLite database
+  + Rich querying
+  - More complex to setup
+  - Not needed for current use case
+
+Decision: JSONL for simplicity + queryability
+
+---
+
+DECISION 10: LLAMA 3.1 MODEL CHOICE
+────────────────────────────────────
+Choice: Llama 3.1 (7B or 70B, user chooses)
+Rationale:
+  ✓ Open-source (no licensing issues)
+  ✓ High quality (matches GPT-3.5 on many benchmarks)
+  ✓ 7B fits on consumer GPUs/CPUs
+  ✓ 70B available for power users
+  ✗ Tradeoff: not quite as good as GPT-4
+
+Alternative: GPT-3.5/GPT-4
+  + Higher quality
+  - Requires API key & payment
+  - Privacy concerns
+
+Alternative: Mistral, Zephyr
+  + Good quality
+  - Less stable community/updates
+
+Decision: Llama 3.1 for quality + open-source
+
+---
+
+DECISION 11: NO PERSISTENT DATABASE, USE JSON FILES
+────────────────────────────────────────────────────
+Choice: Store interaction history and notes in JSON files
+Rationale:
+  ✓ Simple (no database server to maintain)
+  ✓ Human-readable (can inspect with text editor)
+  ✓ Portable (backup = copy a file)
+  ✓ Version-controllable (can use git)
+  ✗ Tradeoff: doesn't scale to millions of records
+
+Alternative: PostgreSQL, MongoDB
+  + Better for large scale
+  - Requires database setup/maintenance
+  - More complexity
+
+Alternative: SQLite
+  + Good middle ground
+  - Overkill for current use case
+
+Decision: JSON files until we need to scale
+
+---
+
+DECISION 12: MODULAR, NOT MONOLITHIC
+─────────────────────────────────────
+Choice: Organize code into independent modules (audio/, core/, learning/)
+Rationale:
+  ✓ Easy to test individual components
+  ✓ Easy to replace/upgrade one component
+  ✓ Clear separation of concerns
+  ✓ New contributors can understand faster
+  ✗ Tradeoff: slightly more complex than monolithic
+
+Alternative: Single app.py with everything
+  + Simpler to start
+  - Harder to maintain long-term
+  - Hard to test/debug
+  - Hard to extend
+
+Decision: MODULAR architecture for maintainability
+
+---
+
+DECISION 13: RAG (RETRIEVAL-AUGMENTED GENERATION)
+──────────────────────────────────────────────────
+Choice: Inject retrieved knowledge into LLM prompt before inference
+Rationale:
+  ✓ LLM answers are grounded in facts (from knowledge base)
+  ✓ Reduces hallucinations (made-up answers)
+  ✓ Answers are traceable to source
+  ✓ Knowledge base is easy to update
+  ✗ Tradeoff: added latency (retrieval step before inference)
+
+Alternative: Fine-tune LLM on knowledge
+  + Answers baked in
+  - Requires retraining (expensive)
+  - Hard to update knowledge
+
+Alternative: No context (vanilla LLM)
+  + Simpler
+  - LLM hallucineates more often
+  - Can't use external knowledge
+
+Decision: RAG for grounded, updatable, traceable answers
+
+---
+
+=== DESIGN PRINCIPLES SUMMARY ===
+
+1. LOCAL-FIRST: No cloud, no APIs, privacy by default
+2. SIMPLE: Minimal dependencies, clear code, easy to understand
+3. MODULAR: Independent components, easy to test/replace
+4. TRANSPARENT: Everything logged, full audit trail
+5. SAFE: Confirmation gates, input validation, error handling
+6. EXTENSIBLE: Easy to add actions, knowledge, models
+7. LEARNABLE: System improves from interactions
+8. MAINTAINABLE: Good documentation, clear interfaces
+
+These principles guide all technical decisions.
+If a choice violates these principles, reconsider it.

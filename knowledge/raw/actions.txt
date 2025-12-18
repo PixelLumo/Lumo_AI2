@@ -1,0 +1,6 @@
+
+LUMO supports three main action types: web_search, save_note, and execute_action.
+Destructive actions like save_note require explicit user confirmation.
+Read-only actions like web_search execute immediately without confirmation.
+Actions are logged with arguments and results for debugging and learning.
+The action executor validates inputs and handles errors gracefully.
