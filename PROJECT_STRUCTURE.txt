@@ -3,7 +3,7 @@ LUMO AI - COMPLETE PROJECT STRUCTURE
 
 Lumo_AI/
 ├── .env                              # Environment variables
-├── .git/                             # Git repository
+├── .git/                             # Git repository (linked to GitHub)
 ├── .gitignore                        # Git ignore file
 ├── .pre-commit-config.yaml           # Pre-commit hooks
 ├── .secrets.baseline                 # Secrets detection baseline
@@ -12,34 +12,33 @@ Lumo_AI/
 ├── ARCHITECTURE.md                   # System architecture guide
 ├── BUILD_COMPLETE.md                 # Build completion summary
 ├── BUILD_STATUS.txt                  # Build status report
+├── CLEANUP_REPORT.md                 # Cleanup report
 ├── COMMAND_CHEATSHEET.md             # Command reference guide
 ├── DOCUMENTATION_INDEX.md            # Documentation index
 ├── FEATURES_ENHANCED.md              # Enhanced features list
 ├── FINAL_SUMMARY.md                  # Final summary
 ├── HARDENING.md                      # Security hardening guide
 ├── IMPROVEMENT_LOOP.md               # Improvement loop documentation
-├── improvement_loop.py               # Improvement loop implementation
 ├── LEARNING.md                       # Learning system documentation
+├── LEARNING_LOG.jsonl                # Learning interactions log
 ├── MOCK_LLM_PATTERNS.md              # Mock LLM patterns
 ├── MONITORING_SETUP.md               # Monitoring setup guide
 ├── PIPER_SETUP.md                    # Piper TTS setup guide
 ├── PROJECT_STRUCTURE.txt             # This file
 ├── QUICK_DEMO.md                     # Quick demo guide
-├── QUICK_REFERENCE.py                # Quick reference script
 ├── README.md                         # Project README
-├── SYSTEM_STATUS.py                  # System status script
 ├── SESSION_GUIDE.md                  # Session guide
+├── SESSION_DATA.jsonl                # Session data log
 ├── START_HERE_VOICE.txt              # Voice interface startup guide
+├── SYSTEM_STATUS.md                  # System status documentation
 ├── VOICE_GUIDE.md                    # Voice usage guide
 ├── VOICE_READY.txt                   # Voice interface ready status
 ├── config/                           # Configuration directory
 ├── requirements.txt                  # Python dependencies
 ├── run.py                            # Main application entry point
 ├── web_app.py                        # Web application
-├── web_app_mock.py                   # Mock web application
 ├── lumo.log                          # Application log file
 ├── notes.txt                         # Notes file
-├── session_data.jsonl                # Session data
 │
 ├── actions/                          # Action modules
 │   ├── __init__.py
@@ -50,12 +49,17 @@ Lumo_AI/
 ├── audio/                            # Audio processing modules
 │   ├── __init__.py
 │   ├── __pycache__/
-│   ├── buffer.py                     # Audio buffering
-│   ├── kws.py                        # Keyword spotting
-│   ├── piper/                        # Piper TTS models
-│   ├── stream.py                     # Audio streaming
-│   ├── stt.py                        # Speech-to-text
-│   ├── tts.py                        # Text-to-speech
+│   ├── kws.py                        # Keyword spotting (wake word detection)
+│   ├── piper/                        # Piper TTS models and utilities
+│   │   ├── en_US-lessac-medium.onnx  # Female voice model
+│   │   ├── en_US-hfc_female-medium.onnx
+│   │   ├── piper.exe                 # TTS executable
+│   │   ├── libtashkeel_model.ort      # Diacritization model
+│   │   ├── espeak-ng-data/           # Language and voice data
+│   │   ├── onnxruntime.dll           # ONNX runtime
+│   │   └── pkgconfig/                # Package configuration
+│   ├── stt.py                        # Speech-to-text (Faster-Whisper)
+│   ├── tts.py                        # Text-to-speech (Piper)
 │   └── vad.py                        # Voice activity detection
 │
 ├── config/                           # Configuration
@@ -66,10 +70,8 @@ Lumo_AI/
 │   ├── __pycache__/
 │   ├── confirmation.py               # User confirmation system
 │   ├── llm.py                        # LLM interface (Ollama)
-│   ├── logger.py                     # Logging system
-│   ├── memory.py                     # Memory system
-│   ├── planner.py                    # Action planner
-│   └── (additional core modules)
+│   ├── memory.py                     # Memory system (FAISS vector DB)
+│   └── app/                          # Legacy app directory (deprecated)
 │
 ├── knowledge/                        # Knowledge base (RAG system)
 │   ├── __pycache__/
@@ -77,23 +79,34 @@ Lumo_AI/
 │   ├── chunks.jsonl                  # Indexed document chunks
 │   ├── index.faiss                   # FAISS vector index
 │   ├── metadata.jsonl                # Chunk metadata
-│   ├── index.py                      # FAISS indexing script
-│   ├── ingest.py                     # Document ingestion script
 │   ├── rag.py                        # RAG (Retrieval-Augmented Generation)
 │   ├── search.py                     # Semantic search interface
-│   └── raw/                          # Raw knowledge documents
-│       ├── actions.txt
+│   └── raw/                          # Raw knowledge documents (12 files)
+│       ├── 01_SYSTEM_OVERVIEW.txt
+│       ├── 02_ARCHITECTURE.txt
+│       ├── 03_PIPELINE_FLOW.txt
+│       ├── 04_SYSTEM_RULES.txt
+│       ├── 05_SAFETY_GUARDRAILS.txt
+│       ├── 06_DESIGN_DECISIONS.txt
+│       ├── 07_MEMORY_SYSTEM.txt
+│       ├── 08_KEYWORD_SPOTTING.txt
+│       ├── 09_ACTION_SYSTEM.txt
+│       ├── 10_LEARNING_SYSTEM.txt
+│       ├── 11_RAG_PIPELINE.txt
+│       ├── 12_DEPLOYMENT.txt
+│       ├── ARCHITECTURE_DUMMY.txt
 │       ├── ARCHITECTURE.md
 │       ├── DECISIONS_2025_12.txt
 │       ├── DESIGN_DECISIONS.txt
-│       ├── learning.txt
-│       ├── memory.txt
 │       ├── NOTES_ON_MEMORY.txt
 │       ├── PIPELINE_FLOW.txt
 │       ├── SAFETY_GUARDRAILS.txt
 │       ├── SYSTEM_OVERVIEW.txt
 │       ├── SYSTEM_RULES.txt
-│       └── WHY_KEYWORD_SPOTTING.txt
+│       ├── WHY_KEYWORD_SPOTTING.txt
+│       ├── actions.txt
+│       ├── learning.txt
+│       └── memory.txt
 │
 ├── learning/                         # Learning/improvement system
 │   ├── __init__.py
@@ -119,69 +132,83 @@ Lumo_AI/
 │   ├── __pycache__/
 │   └── console.py                    # Console UI
 │
-├── test_api_key.py                   # API key test
-├── test_imports.py                   # Import test
-├── test_integration.py               # Integration test
-├── test_knowledge_expanded.py         # Knowledge base test
-├── test_learning_log.py              # Learning log test
-├── test_llm_responses.py             # LLM responses test
-├── test_rag.py                       # RAG pipeline test
-├── test_system_full.py               # Full system test
-├── test_text_input.py                # Text input test
-├── test_text_mode.py                 # Text mode test
-├── test_voice.py                     # Voice test
-└── test_voice_demo.py                # Voice demo test
+├── test_actions.py                   # Action system test
+├── test_imports.py                   # Import verification test
+├── test_knowledge.py                 # Knowledge base test
+├── test_learning.py                  # Learning system test
+├── test_llm.py                       # LLM interface test
+├── test_memory.py                    # Memory system test
+└── test_system.py                    # Full system integration test
 
 
 KEY FILES SUMMARY
 ================================================================================
 
-CORE APPLICATION:
+ENTRY POINTS:
   - run.py                    Main voice interface entry point
-  - web_app.py               Web interface
-  - config/                  Configuration files
+  - web_app.py               Web application interface
 
-RAG (KNOWLEDGE BASE):
-  - knowledge/search.py      Semantic search (FAISS)
-  - knowledge/rag.py         RAG message augmentation
-  - knowledge/index.py       Vector indexing
-  - knowledge/ingest.py      Document chunking
-  - knowledge/raw/           12 comprehensive knowledge documents (1500+ lines)
-
-LLM INTEGRATION:
-  - core/llm.py              Ollama interface with RAG support
+CORE FUNCTIONALITY:
+  - core/llm.py              Ollama LLM interface with RAG support
+  - core/memory.py           FAISS vector memory system
   - core/confirmation.py     User confirmation gates
+
+RAG SYSTEM (KNOWLEDGE BASE):
+  - knowledge/search.py      Semantic search (FAISS vector DB)
+  - knowledge/rag.py         RAG message augmentation
+  - knowledge/raw/           24 comprehensive knowledge documents
+  - 134 chunks indexed with embeddings
 
 VOICE INTERFACE:
   - audio/stt.py             Faster-Whisper speech-to-text
   - audio/vad.py             Voice activity detection
   - audio/kws.py             Keyword spotting (wake word)
-  - audio/tts.py             Text-to-speech
+  - audio/tts.py             Piper text-to-speech
 
-MEMORY & LEARNING:
-  - core/memory.py           FAISS vector memory
-  - learning/analyzer.py     Learning system
+LEARNING & LOGGING:
+  - learning/analyzer.py     Learning system analysis
+  - learning/feedback.py     Feedback collection
   - learning/logger.py       Interaction logging
+  - learning/tuner.py        System parameter tuning
+
+ACTIONS:
+  - actions/notes.py         Note-saving actions
+  - actions/web_search.py    Web search capabilities
 
 UI & OUTPUT:
   - ui/console.py            Console interface
-  - audio/piper/             Piper TTS voice models
+  - templates/               HTML templates for web UI
+
+CONFIGURATION:
+  - config/settings.py       Configuration management
+  - config/__init__.py       Config initialization
 
 TESTING:
-  - test_voice_demo.py       Voice interface demo (WORKING)
-  - test_llm_responses.py    LLM response testing (WORKING)
-  - test_system_full.py      Full system validation (WORKING)
-  - test_rag.py              RAG pipeline validation (WORKING)
-  - test_integration.py      Integration validation (WORKING)
-  - (7 additional test files)
+  - test_system.py           Full system validation
+  - test_llm.py              LLM response testing
+  - test_knowledge.py        Knowledge base testing
+  - test_learning.py         Learning system testing
+  - test_memory.py           Memory system testing
+  - test_actions.py          Actions system testing
+  - test_imports.py          Import verification
 
 DOCUMENTATION:
-  - README.md                Project overview
-  - ARCHITECTURE.md          System design
-  - VOICE_GUIDE.md           Voice interface usage
-  - START_HERE_VOICE.txt     Quick start guide
-  - SYSTEM_STATUS.py         System status summary
-  - (15+ additional guides)
+  - README.md                Project overview and getting started
+  - ARCHITECTURE.md          System design and architecture
+  - VOICE_GUIDE.md           Voice interface usage guide
+  - START_HERE_VOICE.txt     Quick start for voice features
+  - SYSTEM_STATUS.md         Current system status and capabilities
+  - SESSION_GUIDE.md         Session management guide
+  - LEARNING.md              Learning system documentation
+  - IMPROVEMENT_LOOP.md      Improvement loop process
+  - HARDENING.md             Security hardening guidelines
+  - MONITORING_SETUP.md      Monitoring and debugging setup
+  - COMMAND_CHEATSHEET.md    Command reference guide
+  - FEATURES_ENHANCED.md     Enhanced features list
+  - BUILD_STATUS.txt         Build status documentation
+  - ALL_COMPLETE.md          Completion checklist
+  - CLEANUP_REPORT.md        Cleanup operations report
+  - (10+ additional guides)
 
 
 CRITICAL DEPENDENCIES
@@ -212,51 +239,71 @@ System Requirements:
 KNOWLEDGE BASE CONTENTS
 ================================================================================
 
-Documents (12 files, 134 chunks):
-  1. SYSTEM_OVERVIEW.txt          - What LUMO is and capabilities
-  2. ARCHITECTURE.md               - System layers and data flow
-  3. PIPELINE_FLOW.txt             - 6-phase request-response cycle
-  4. SYSTEM_RULES.txt              - 10 core rules + content policies
-  5. SAFETY_GUARDRAILS.txt         - Confirmation gates, validation
-  6. DESIGN_DECISIONS.txt          - 13 architectural decisions
-  7. NOTES_ON_MEMORY.txt           - FAISS implementation details
-  8. WHY_KEYWORD_SPOTTING.txt      - Wake word detection design
-  9. DECISIONS_2025_12.txt         - December 2025 architecture
-  10. actions.txt                  - Action system documentation
-  11. memory.txt                   - Memory system documentation
-  12. learning.txt                 - Learning system documentation
+Documents (24 files, 134 chunks):
+  Core Documentation:
+    1. 01_SYSTEM_OVERVIEW.txt        - What LUMO is and capabilities
+    2. 02_ARCHITECTURE.txt            - System layers and data flow
+    3. 03_PIPELINE_FLOW.txt           - 6-phase request-response cycle
+    4. 04_SYSTEM_RULES.txt            - 10 core rules + content policies
+    5. 05_SAFETY_GUARDRAILS.txt       - Confirmation gates, validation
+    6. 06_DESIGN_DECISIONS.txt        - 13 architectural decisions
+    7. 07_MEMORY_SYSTEM.txt           - FAISS implementation details
+    8. 08_KEYWORD_SPOTTING.txt        - Wake word detection design
+    9. 09_ACTION_SYSTEM.txt           - Action system architecture
+    10. 10_LEARNING_SYSTEM.txt        - Learning/improvement system
+    11. 11_RAG_PIPELINE.txt           - RAG implementation
+    12. 12_DEPLOYMENT.txt             - Deployment guidelines
 
-Indexing:
+  Supplementary Documentation:
+    13. ARCHITECTURE.md               - Architecture overview
+    14. ARCHITECTURE_DUMMY.txt        - Legacy architecture docs
+    15. DECISIONS_2025_12.txt         - December 2025 decisions
+    16. DESIGN_DECISIONS.txt          - Design rationale
+    17. NOTES_ON_MEMORY.txt           - Memory system deep dive
+    18. PIPELINE_FLOW.txt             - Pipeline flow details
+    19. SAFETY_GUARDRAILS.txt         - Safety implementation
+    20. SYSTEM_OVERVIEW.txt           - System overview
+    21. SYSTEM_RULES.txt              - System rules
+    22. WHY_KEYWORD_SPOTTING.txt      - Keyword spotting rationale
+    23. actions.txt                   - Actions documentation
+    24. learning.txt                  - Learning documentation
+    25. memory.txt                    - Memory documentation
+
+Indexing Metrics:
   - 134 chunks total
   - 384-dimensional embeddings
   - FAISS IndexFlatL2
-  - <100ms semantic search
+  - <100ms semantic search latency
 
 
 SYSTEM STATUS
 ================================================================================
 
 ✓ OPERATIONAL COMPONENTS:
-  - Knowledge Base         134 chunks indexed, semantic search working
-  - Voice Interface        Microphone detection (9 devices), wake word ready
+  - Knowledge Base         134 chunks indexed, semantic search <100ms
+  - Voice Interface        Microphone detection, wake word ready
   - STT (Faster-Whisper)   Installed, 95% accuracy on clear speech
-  - LLM Backend            Ollama ready (requires: ollama serve)
+  - TTS (Piper)            Multiple voice models available
+  - LLM Backend            Ollama integration ready (requires: ollama serve)
   - RAG Pipeline           Tested and verified working
-  - Memory System          FAISS vector DB operational
+  - Memory System          FAISS vector DB operational (384-dimensional)
   - Safety Controls        Confirmation gates implemented
   - Logging                Full audit trail to JSON
+  - Learning System        Interaction analysis and tuning
+  - Web Interface          Flask application ready
 
-✓ TEST RESULTS:
-  - test_voice_demo.py     PASS - Voice interface components verified
-  - test_system_full.py    PASS - 134 chunks indexed successfully
-  - test_rag.py            PASS - RAG pipeline working
-  - test_integration.py    PASS - Components integrated correctly
-  - test_llm_responses.py  PASS - LLM responses grounded in knowledge
+✓ CURRENT STATUS:
+  - Code frozen and synced to GitHub
+  - All dependencies installed in .venv
+  - 7 comprehensive test files ready
+  - 24 knowledge documents indexed
+  - Production-ready architecture
+  - Modular and extensible design
 
-⚠ PENDING (Optional):
+⚠ OPTIONAL ENHANCEMENTS:
   - GPU acceleration       (CPU mode functional, ~30-50s response time)
-  - Text-to-speech synthesis (Optional Piper integration)
   - WebRTC VAD             (Requires C++ build tools)
+  - Extended TTS models    (Additional voice options available)
 
 
 QUICK START
@@ -346,6 +393,8 @@ Knowledge Base:   knowledge/raw/
 
 ================================================================================
 Project Status: PRODUCTION READY
+GitHub Repository: https://github.com/PixelLumo/Lumo_AI.git
 Last Updated: December 18, 2025
 Version: 2.0
+Development Branch: main (synced to GitHub)
 ================================================================================
